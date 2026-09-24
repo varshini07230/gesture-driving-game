@@ -1,6 +1,79 @@
-🚗 Gesture Driving Game
-Experiment 5: Gesture-Based Game Interface
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gesture Driving Game</title>
+<style>
+body{margin:0;background:#111;color:#fff;font-family:Arial;text-align:center}
+h1{margin:18px 0 5px} p{margin:6px}
+canvas{background:#333;border:3px solid #fff;display:block;margin:15px auto;max-width:92vw}
+button{padding:11px 18px;font-size:16px;margin:8px;border:0;border-radius:6px;cursor:pointer}
+#start{background:#1685ff;color:white}
+#status{min-height:24px}
+#cameraBox{width:min(500px,92vw);margin:10px auto}
+video{width:100%;border:2px solid #777;border-radius:6px;transform:scaleX(-1)}
+.help{max-width:600px;margin:10px auto 20px;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>🚗 Gesture Driving Game</h1>
+<p>Experiment 5: Gesture-Based Game Interface</p>
+<button id="start">Start Game + Camera</button>
+<div id="status">Click Start Game and allow camera access.</div>
+<canvas id="game" width="500" height="650"></canvas>
+<div id="cameraBox"><video id="video" autoplay playsinline muted></video></div>
+<div class="help"><b>Control:</b> Move your index finger LEFT or RIGHT to steer. Avoid red obstacles.</div>
 
-Start Game + Camera
-Click Start Game and allow camera access.
-Control: Move your index finger LEFT or RIGHT to steer. Avoid red obstacles.
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script>
+const c=document.getElementById("game"),ctx=c.getContext("2d"),v=document.getElementById("video");
+const start=document.getElementById("start"),status=document.getElementById("status");
+let car={x:225,y:550,w:50,h:80},ob={x:200,y:-100,w:50,h:80};
+let score=0,running=false,camReady=false;
+
+function reset(){car.x=225;ob.x=100+Math.random()*300;ob.y=-100;score=0}
+function hit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+function draw(){
+ ctx.fillStyle="#333";ctx.fillRect(0,0,500,650);
+ ctx.fillStyle="#666";ctx.fillRect(75,0,350,650);
+ ctx.strokeStyle="#fff";ctx.lineWidth=5;ctx.setLineDash([25,20]);
+ ctx.beginPath();ctx.moveTo(250,0);ctx.lineTo(250,650);ctx.stroke();ctx.setLineDash([]);
+ ctx.fillStyle="#1685ff";ctx.fillRect(car.x,car.y,car.w,car.h);
+ ctx.fillStyle="#e33";ctx.fillRect(ob.x,ob.y,ob.w,ob.h);
+ ctx.fillStyle="#fff";ctx.font="28px Arial";ctx.fillText("Score: "+score,15,35)
+}
+function loop(){
+ if(!running)return;
+ ob.y+=6;
+ if(ob.y>650){ob.y=-100;ob.x=100+Math.random()*300;score++}
+ if(hit(car,ob)){running=false;status.textContent="Game Over! Score: "+score+" — click Restart Game."}
+ draw();requestAnimationFrame(loop)
+}
+const hands=new Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+hands.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:.6,minTrackingConfidence:.6});
+hands.onResults(r=>{
+ if(!running||!r.multiHandLandmarks?.length)return;
+ const x=r.multiHandLandmarks[0][8].x;
+ if(x<.4){car.x-=8;status.textContent="Gesture: LEFT"}
+ else if(x>.6){car.x+=8;status.textContent="Gesture: RIGHT"}
+ else status.textContent="Gesture: CENTER";
+ car.x=Math.max(100,Math.min(350,car.x))
+});
+async function cameraStart(){
+ try{
+  const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+  v.srcObject=stream;
+  const camera=new Camera(v,{onFrame:async()=>await hands.send({image:v}),width:500,height:400});
+  camera.start();camReady=true;status.textContent="Camera ready. Move your index finger."
+ }catch(e){status.textContent="Camera permission denied. Allow camera access and reload."}
+}
+start.addEventListener("click",async()=>{
+ reset();running=true;start.textContent="Restart Game";draw();
+ if(!camReady)await cameraStart();
+ loop()
+}); draw();
+</script>
+</body>
+</html>
