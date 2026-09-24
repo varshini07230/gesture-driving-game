@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gesture Driving Game - Experiment 5</title>
+  <style>
+    body { margin:0; background:#111; color:white; font-family:Arial; text-align:center; }
+    canvas { background:#444; border:3px solid white; margin-top:15px; }
+    button { padding:10px 18px; font-size:16px; margin:10px; cursor:pointer; }
+    #status { margin:10px; }
+  </style>
+</head>
+<body>
+  <h1>Gesture Driving Game</h1>
+  <p>Experiment 5: Gesture-Based Game Interface</p>
+  <button onclick="startGame()">Start Game</button>
+  <div id="status">Use A/D or ←/→ keys to move the car.</div>
+  <canvas id="game" width="500" height="650"></canvas>
+
+<script>
+const c=document.getElementById("game"),ctx=c.getContext("2d");
+let car={x:225,y:550,w:50,h:80}, obs={x:200,y:-100,w:50,h:80};
+let score=0, running=false, left=false, right=false;
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowLeft"||e.key.toLowerCase()==="a") left=true;
+  if(e.key==="ArrowRight"||e.key.toLowerCase()==="d") right=true;
+});
+document.addEventListener("keyup",e=>{
+  if(e.key==="ArrowLeft"||e.key.toLowerCase()==="a") left=false;
+  if(e.key==="ArrowRight"||e.key.toLowerCase()==="d") right=false;
+});
+
+function startGame(){
+  car.x=225; obs.y=-100; obs.x=150+Math.random()*200;
+  score=0; running=true; loop();
+}
+function hit(a,b){
+  return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+}
+function loop(){
+  if(!running)return;
+  if(left)car.x-=7;
+  if(right)car.x+=7;
+  car.x=Math.max(100,Math.min(350,car.x));
+  obs.y+=6;
+  if(obs.y>650){obs.y=-100;obs.x=100+Math.random()*250;score++;}
+  if(hit(car,obs)){running=false;document.getElementById("status").textContent="Game Over! Score: "+score;}
+  draw(); requestAnimationFrame(loop);
+}
+function draw(){
+  ctx.fillStyle="#333";ctx.fillRect(0,0,500,650);
+  ctx.fillStyle="#666";ctx.fillRect(75,0,350,650);
+  ctx.strokeStyle="white";ctx.setLineDash([25,20]);ctx.lineWidth=5;
+  ctx.beginPath();ctx.moveTo(250,0);ctx.lineTo(250,650);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle="#1685ff";ctx.fillRect(car.x,car.y,car.w,car.h);
+  ctx.fillStyle="#e33";ctx.fillRect(obs.x,obs.y,obs.w,obs.h);
+  ctx.fillStyle="white";ctx.font="28px Arial";ctx.fillText("Score: "+score,15,35);
+}
+draw();
+</script>
+</body>
+</html>
